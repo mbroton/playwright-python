@@ -19,7 +19,7 @@ web automation that is ever-green, capable, reliable and fast.
 """
 
 from contextlib import contextmanager
-from typing import Any, Optional, Union, overload
+from typing import Any, Generator, List, Optional, Union, overload
 
 import playwright._impl._api_structures
 import playwright._impl._errors
@@ -27,9 +27,7 @@ import playwright.sync_api._generated
 from playwright._impl._assertions import (
     APIResponseAssertions as APIResponseAssertionsImpl,
 )
-from playwright._impl._assertions import (
-    LocatorAssertions as LocatorAssertionsImpl,
-)
+from playwright._impl._assertions import LocatorAssertions as LocatorAssertionsImpl
 from playwright._impl._assertions import PageAssertions as PageAssertionsImpl
 from playwright.sync_api._context_manager import PlaywrightContextManager
 from playwright.sync_api._generated import (
@@ -112,17 +110,23 @@ class Expect:
 
     @overload
     def __call__(
-        self, actual: Page, message: Optional[str] = None
+        self, actual: Page, message: Optional[str] = None, is_soft: bool = False
     ) -> PageAssertions: ...
 
     @overload
     def __call__(
-        self, actual: Locator, message: Optional[str] = None
+        self,
+        actual: Locator,
+        message: Optional[str] = None,
+        is_soft: bool = False,
     ) -> LocatorAssertions: ...
 
     @overload
     def __call__(
-        self, actual: APIResponse, message: Optional[str] = None
+        self,
+        actual: APIResponse,
+        message: Optional[str] = None,
+        is_soft: bool = False,
     ) -> APIResponseAssertions: ...
 
     def __call__(
@@ -165,8 +169,29 @@ expect = Expect()
 
 
 class SoftExpect:
-    def __init__(self):
-        self._calls = []
+    def __init__(self) -> None:
+        self._calls: List[
+            Union[PageAssertions, LocatorAssertions, APIResponseAssertions]
+        ] = []
+
+    @overload
+    def __call__(
+        self, actual: Page, message: Optional[str] = None
+    ) -> PageAssertions: ...
+
+    @overload
+    def __call__(
+        self,
+        actual: Locator,
+        message: Optional[str] = None,
+    ) -> LocatorAssertions: ...
+
+    @overload
+    def __call__(
+        self,
+        actual: APIResponse,
+        message: Optional[str] = None,
+    ) -> APIResponseAssertions: ...
 
     def __call__(
         self,
@@ -179,10 +204,10 @@ class SoftExpect:
 
 
 @contextmanager
-def soft_expect_manager():
+def soft_expect_manager() -> Generator[SoftExpect, None, None]:
     context = SoftExpect()
     yield context
-    errors = []
+    errors: List[AssertionError] = []
     for call in context._calls:
         if call._impl_obj._soft_errors:
             errors.extend(call._impl_obj._soft_errors)
