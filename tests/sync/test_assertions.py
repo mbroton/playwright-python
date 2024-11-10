@@ -17,7 +17,13 @@ import re
 
 import pytest
 
-from playwright.sync_api import Browser, Error, Page, expect
+from playwright.sync_api import (
+    Browser,
+    Error,
+    Page,
+    expect,
+    soft_expect_manager,
+)
 from tests.server import Server
 
 
@@ -29,7 +35,9 @@ def test_assertions_page_to_have_title(page: Page, server: Server) -> None:
     with pytest.raises(AssertionError):
         expect(page).to_have_title("not the current title", timeout=750)
     with pytest.raises(AssertionError):
-        expect(page).to_have_title(re.compile("not the current title"), timeout=750)
+        expect(page).to_have_title(
+            re.compile("not the current title"), timeout=750
+        )
     with pytest.raises(AssertionError):
         expect(page).not_to_have_title(re.compile("new title"), timeout=750)
     with pytest.raises(AssertionError):
@@ -90,17 +98,27 @@ def test_assertions_locator_to_contain_text(page: Page, server: Server) -> None:
         expect(page.locator("div#foobar")).to_contain_text("bar", timeout=100)
 
     page.set_content("<div>Text \n1</div><div>Text2</div><div>Text3</div>")
-    expect(page.locator("div")).to_contain_text(["ext     1", re.compile("ext3")])
+    expect(page.locator("div")).to_contain_text(
+        ["ext     1", re.compile("ext3")]
+    )
 
 
-def test_assertions_locator_to_have_attribute(page: Page, server: Server) -> None:
+def test_assertions_locator_to_have_attribute(
+    page: Page, server: Server
+) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<div id=foobar>kek</div>")
     expect(page.locator("div#foobar")).to_have_attribute("id", "foobar")
-    expect(page.locator("div#foobar")).to_have_attribute("id", re.compile("foobar"))
-    expect(page.locator("div#foobar")).not_to_have_attribute("id", "kek", timeout=100)
+    expect(page.locator("div#foobar")).to_have_attribute(
+        "id", re.compile("foobar")
+    )
+    expect(page.locator("div#foobar")).not_to_have_attribute(
+        "id", "kek", timeout=100
+    )
     with pytest.raises(AssertionError):
-        expect(page.locator("div#foobar")).to_have_attribute("id", "koko", timeout=100)
+        expect(page.locator("div#foobar")).to_have_attribute(
+            "id", "koko", timeout=100
+        )
 
 
 def test_assertions_locator_to_have_attribute_ignore_case(
@@ -135,7 +153,9 @@ def test_assertions_locator_to_have_count(page: Page, server: Server) -> None:
 
 def test_assertions_locator_to_have_css(page: Page, server: Server) -> None:
     page.goto(server.EMPTY_PAGE)
-    page.set_content("<div class=foobar style='color: rgb(234, 74, 90);'>kek</div>")
+    page.set_content(
+        "<div class=foobar style='color: rgb(234, 74, 90);'>kek</div>"
+    )
     expect(page.locator("div.foobar")).to_have_css("color", "rgb(234, 74, 90)")
     expect(page.locator("div.foobar")).not_to_have_css(
         "color", "rgb(42, 42, 42)", timeout=100
@@ -155,7 +175,9 @@ def test_assertions_locator_to_have_id(page: Page, server: Server) -> None:
         expect(page.locator("div.foobar")).to_have_id("top", timeout=100)
 
 
-def test_assertions_locator_to_have_js_property(page: Page, server: Server) -> None:
+def test_assertions_locator_to_have_js_property(
+    page: Page, server: Server
+) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<div></div>")
     page.eval_on_selector(
@@ -246,7 +268,9 @@ def test_assertions_locator_to_have_text(page: Page, server: Server) -> None:
 
     page.set_content("<div>Text    \n1</div><div>Text   2a</div>")
     # Should only normalize whitespace in the first item.
-    expect(page.locator("div")).to_have_text(["Text  1", re.compile(r"Text   \d+a")])
+    expect(page.locator("div")).to_have_text(
+        ["Text  1", re.compile(r"Text   \d+a")]
+    )
 
 
 @pytest.mark.parametrize(
@@ -300,7 +324,9 @@ def test_ignore_case(page: Page, server: Server, method: str) -> None:
 def test_ignore_case_regex(page: Page, server: Server, method: str) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<div id=target>apple BANANA</div><div>orange</div>")
-    getattr(expect(page.locator("div#target")), method)(re.compile("apple BANANA"))
+    getattr(expect(page.locator("div#target")), method)(
+        re.compile("apple BANANA")
+    )
     getattr(expect(page.locator("div#target")), method)(
         re.compile("apple banana"), ignore_case=True
     )
@@ -400,7 +426,9 @@ def test_to_have_values_follows_labels(page: Page, server: Server) -> None:
     expect(locator).to_have_values(["R", "G"])
 
 
-def test_to_have_values_exact_match_with_text(page: Page, server: Server) -> None:
+def test_to_have_values_exact_match_with_text(
+    page: Page, server: Server
+) -> None:
     page.set_content(
         """
         <select multiple>
@@ -468,7 +496,9 @@ def test_to_have_values_fails_when_multiple_not_specified(
     locator.select_option(["B"])
     with pytest.raises(Error) as excinfo:
         expect(locator).to_have_values(["R", "G"], timeout=500)
-    assert "Error: Not a select element with a multiple attribute" in str(excinfo.value)
+    assert "Error: Not a select element with a multiple attribute" in str(
+        excinfo.value
+    )
 
 
 def test_to_have_values_fails_when_not_a_select_element(
@@ -482,7 +512,9 @@ def test_to_have_values_fails_when_not_a_select_element(
     locator = page.locator("input")
     with pytest.raises(Error) as excinfo:
         expect(locator).to_have_values(["R", "G"], timeout=500)
-    assert "Error: Not a select element with a multiple attribute" in str(excinfo.value)
+    assert "Error: Not a select element with a multiple attribute" in str(
+        excinfo.value
+    )
 
 
 def test_assertions_locator_to_be_checked(page: Page, server: Server) -> None:
@@ -497,12 +529,16 @@ def test_assertions_locator_to_be_checked(page: Page, server: Server) -> None:
         expect(my_checkbox).to_be_checked(timeout=100, checked=True)
     my_checkbox.check()
     expect(my_checkbox).to_be_checked(timeout=100, checked=True)
-    with pytest.raises(AssertionError, match="Locator expected to be unchecked"):
+    with pytest.raises(
+        AssertionError, match="Locator expected to be unchecked"
+    ):
         expect(my_checkbox).to_be_checked(timeout=100, checked=False)
     expect(my_checkbox).to_be_checked()
 
 
-def test_assertions_locator_to_be_disabled_enabled(page: Page, server: Server) -> None:
+def test_assertions_locator_to_be_disabled_enabled(
+    page: Page, server: Server
+) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<input type=checkbox>")
     my_checkbox = page.locator("input")
@@ -534,7 +570,9 @@ def test_assertions_locator_to_be_enabled_with_false(page: Page) -> None:
     expect(page.locator("button")).to_be_enabled(enabled=False)
 
 
-def test_assertions_locator_to_be_enabled_with_not_and_false(page: Page) -> None:
+def test_assertions_locator_to_be_enabled_with_not_and_false(
+    page: Page,
+) -> None:
     page.set_content("<button>Text</button>")
     expect(page.locator("button")).not_to_be_enabled(enabled=False)
 
@@ -552,7 +590,9 @@ def test_assertions_locator_to_be_enabled_eventually(page: Page) -> None:
     expect(page.locator("button")).to_be_enabled()
 
 
-def test_assertions_locator_to_be_enabled_eventually_with_not(page: Page) -> None:
+def test_assertions_locator_to_be_enabled_eventually_with_not(
+    page: Page,
+) -> None:
     page.set_content("<button>Text</button>")
     page.eval_on_selector(
         "button",
@@ -592,7 +632,9 @@ def test_assertions_locator_to_be_editable_with_false_and_throw_good_exception(
         expect(page.locator("input")).to_be_editable(editable=False)
 
 
-def test_assertions_locator_to_be_editable_with_not_and_false(page: Page) -> None:
+def test_assertions_locator_to_be_editable_with_not_and_false(
+    page: Page,
+) -> None:
     page.set_content("<input></input>")
     expect(page.locator("input")).not_to_be_editable(editable=False)
 
@@ -618,7 +660,9 @@ def test_assertions_locator_to_be_focused(page: Page, server: Server) -> None:
     expect(my_checkbox).to_be_focused()
 
 
-def test_assertions_locator_to_be_hidden_visible(page: Page, server: Server) -> None:
+def test_assertions_locator_to_be_hidden_visible(
+    page: Page, server: Server
+) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<div style='width: 50px; height: 50px;'>Something</div>")
     my_checkbox = page.locator("div")
@@ -649,7 +693,9 @@ def test_assertions_locator_to_be_visible_with_false_throws_good_exception(
         expect(page.locator("button")).to_be_visible(visible=False)
 
 
-def test_assertions_locator_to_be_visible_with_not_and_false(page: Page) -> None:
+def test_assertions_locator_to_be_visible_with_not_and_false(
+    page: Page,
+) -> None:
     page.set_content("<button>hello</button>")
     expect(page.locator("button")).not_to_be_visible(visible=False)
 
@@ -667,7 +713,9 @@ def test_assertions_locator_to_be_visible_eventually(page: Page) -> None:
     expect(page.locator("span")).to_be_visible()
 
 
-def test_assertions_locator_to_be_visible_eventually_with_not(page: Page) -> None:
+def test_assertions_locator_to_be_visible_eventually_with_not(
+    page: Page,
+) -> None:
     page.set_content("<div><span>Hello</span></div>")
     page.eval_on_selector(
         "span",
@@ -685,7 +733,9 @@ def test_assertions_should_serialize_regexp_correctly(
 ) -> None:
     page.goto(server.EMPTY_PAGE)
     page.set_content("<div>iGnOrEcAsE</div>")
-    expect(page.locator("div")).to_have_text(re.compile(r"ignorecase", re.IGNORECASE))
+    expect(page.locator("div")).to_have_text(
+        re.compile(r"ignorecase", re.IGNORECASE)
+    )
     page.set_content(
         """<div>start
 some
@@ -693,13 +743,17 @@ lines
 between
 end</div>"""
     )
-    expect(page.locator("div")).to_have_text(re.compile(r"start.*end", re.DOTALL))
+    expect(page.locator("div")).to_have_text(
+        re.compile(r"start.*end", re.DOTALL)
+    )
     page.set_content(
         """<div>line1
 line2
 line3</div>"""
     )
-    expect(page.locator("div")).to_have_text(re.compile(r"^line2$", re.MULTILINE))
+    expect(page.locator("div")).to_have_text(
+        re.compile(r"^line2$", re.MULTILINE)
+    )
 
 
 def test_assertions_response_is_ok_pass(page: Page, server: Server) -> None:
@@ -707,7 +761,9 @@ def test_assertions_response_is_ok_pass(page: Page, server: Server) -> None:
     expect(response).to_be_ok()
 
 
-def test_assertions_response_is_ok_pass_with_not(page: Page, server: Server) -> None:
+def test_assertions_response_is_ok_pass_with_not(
+    page: Page, server: Server
+) -> None:
     response = page.request.get(server.PREFIX + "/unknown")
     expect(response).not_to_be_ok()
 
@@ -802,7 +858,9 @@ def test_should_print_expected_value_with_custom_message(
     assert "custom-message" in str(excinfo.value)
     assert "Expected value: 'old title'" in str(excinfo.value)
     with pytest.raises(AssertionError) as excinfo:
-        expect(page.get_by_text("hello"), "custom-message").to_be_visible(timeout=100)
+        expect(page.get_by_text("hello"), "custom-message").to_be_visible(
+            timeout=100
+        )
     assert "custom-message" in str(excinfo.value)
     assert "Expected value" not in str(excinfo.value)
 
@@ -864,7 +922,9 @@ def test_should_be_attached_eventually(page: Page) -> None:
 def test_should_be_attached_eventually_with_not(page: Page) -> None:
     page.set_content("<div><span>Hello</span></div>")
     locator = page.locator("span")
-    page.locator("div").evaluate("(e) => setTimeout(() => e.textContent = '', 1000)")
+    page.locator("div").evaluate(
+        "(e) => setTimeout(() => e.textContent = '', 1000)"
+    )
     expect(locator).not_to_be_attached()
 
 
@@ -899,7 +959,9 @@ def test_should_be_attached_with_impossible_timeout_not(page: Page) -> None:
 def test_should_be_able_to_set_custom_timeout(page: Page) -> None:
     with pytest.raises(AssertionError) as exc_info:
         expect(page.locator("#a1")).to_be_visible(timeout=111)
-    assert "LocatorAssertions.to_be_visible with timeout 111ms" in str(exc_info.value)
+    assert "LocatorAssertions.to_be_visible with timeout 111ms" in str(
+        exc_info.value
+    )
 
 
 def test_should_be_able_to_set_custom_global_timeout(page: Page) -> None:
@@ -912,3 +974,15 @@ def test_should_be_able_to_set_custom_global_timeout(page: Page) -> None:
         )
     finally:
         expect.set_options(timeout=5_000)
+
+
+def test_soft_assertions_fail_with_error_message(page: Page) -> None:
+    page.set_content("<div>hello</div>")
+    with pytest.raises(
+        AssertionError,
+        match=r"(?:.|\n)*Error1(?:.|\n)*Error2(?:.|\n)*Error3",
+    ):
+        with soft_expect_manager() as soft_expect:
+            soft_expect(page.locator("div"), "Error1").to_have_text("world")
+            soft_expect(page.locator("div"), "Error2").to_have_text("foo")
+            soft_expect(page.locator("div"), "Error3").to_have_text("bar")
