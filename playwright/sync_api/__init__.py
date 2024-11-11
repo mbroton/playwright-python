@@ -89,6 +89,9 @@ def sync_playwright() -> PlaywrightContextManager:
     return PlaywrightContextManager()
 
 
+_Assertions = Union[PageAssertions, LocatorAssertions, APIResponseAssertions]
+
+
 class Expect:
     _unset: Any = object()
 
@@ -134,7 +137,7 @@ class Expect:
         actual: Union[Page, Locator, APIResponse],
         message: Optional[str] = None,
         is_soft: bool = False,
-    ) -> Union[PageAssertions, LocatorAssertions, APIResponseAssertions]:
+    ) -> _Assertions:
         if isinstance(actual, Page):
             return PageAssertions(
                 PageAssertionsImpl(
@@ -168,10 +171,14 @@ class Expect:
 expect = Expect()
 
 
-class SoftExpect:
+class _SoftExpect:
     def __init__(self) -> None:
         self._calls: List[
-            Union[PageAssertions, LocatorAssertions, APIResponseAssertions]
+            Union[
+                PageAssertionsImpl,
+                LocatorAssertionsImpl,
+                APIResponseAssertionsImpl,
+            ]
         ] = []
 
     @overload
@@ -197,20 +204,19 @@ class SoftExpect:
         self,
         actual: Union[Page, Locator, APIResponse],
         message: Optional[str] = None,
-    ) -> Union[PageAssertions, LocatorAssertions, APIResponseAssertions]:
+    ) -> _Assertions:
         call = expect(actual, message, is_soft=True)
-        self._calls.append(call)
+        self._calls.append(call._impl_obj)
         return call
 
 
 @contextmanager
-def soft_expect_manager() -> Generator[SoftExpect, None, None]:
-    context = SoftExpect()
+def soft_assertions() -> Generator[_SoftExpect, None, None]:
+    context = _SoftExpect()
     yield context
     errors: List[AssertionError] = []
     for call in context._calls:
-        if call._impl_obj._soft_errors:
-            errors.extend(call._impl_obj._soft_errors)
+        errors.extend(call._soft_errors)
     if errors:
         raise AssertionError("\n".join(str(e) for e in errors))
 

@@ -17,7 +17,7 @@ import re
 
 import pytest
 
-from playwright.sync_api import Browser, Error, Page, expect, soft_expect_manager
+from playwright.sync_api import Browser, Error, Page, expect, soft_assertions
 from tests.server import Server
 
 
@@ -924,13 +924,35 @@ def test_should_be_able_to_set_custom_global_timeout(page: Page) -> None:
         expect.set_options(timeout=5_000)
 
 
-def test_soft_assertions_fail_with_error_message(page: Page) -> None:
+def test_soft_assertions_on_locator(page: Page) -> None:
     page.set_content("<div>hello</div>")
-    with pytest.raises(
-        AssertionError,
-        match=r"(?:.|\n)*Error1(?:.|\n)*Error2(?:.|\n)*Error3",
-    ):
-        with soft_expect_manager() as soft_expect:
-            soft_expect(page.locator("div"), "Error1").to_have_text("world")
-            soft_expect(page.locator("div"), "Error2").to_have_text("foo")
-            soft_expect(page.locator("div"), "Error3").to_have_text("bar")
+    with pytest.raises(AssertionError) as exc_info:
+        with soft_assertions() as soft_expect:
+            soft_expect(page.locator("div")).to_have_text("world")
+            soft_expect(page.locator("div")).to_have_text("foo")
+            soft_expect(page.locator("div")).to_have_text("bar")
+    assert "Locator expected to have text 'world'" in str(exc_info.value)
+    assert "Locator expected to have text 'foo'" in str(exc_info.value)
+    assert "Locator expected to have text 'bar'" in str(exc_info.value)
+
+
+def test_soft_assertions_on_page(page: Page) -> None:
+    page.set_content("<div>hello</div><title>Old Title</title>")
+    with pytest.raises(AssertionError) as exc_info:
+        with soft_assertions() as soft_expect:
+            soft_expect(page).to_have_title("foo")
+            soft_expect(page).to_have_url("http://not-exists")
+    assert "Page title expected to be" in str(exc_info.value)
+    assert "Page URL expected to be" in str(exc_info.value)
+
+
+def test_soft_assertions_on_api_response(page: Page, server: Server) -> None:
+    response = page.request.get(server.PREFIX + "/does-not-exist")
+    with pytest.raises(AssertionError) as exc_info:
+        with soft_assertions() as soft_expect:
+            soft_expect(response).to_be_ok()
+            soft_expect(response, "Custom message").to_be_ok()
+    assert "Response status expected to be within [200..299] range" in str(
+        exc_info.value
+    )
+    assert "Custom message" in str(exc_info.value)
