@@ -921,10 +921,6 @@ class SoftAssertionContext:
     def __init__(self) -> None:
         self._failures: List[Exception] = []
 
-    @property
-    def failures(self) -> List[Exception]:
-        return self._failures.copy()
-
     def add_failure(self, error: Exception) -> None:
         if not str(error):
             raise ValueError("Failure message cannot be empty")
