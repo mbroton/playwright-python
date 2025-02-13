@@ -37,6 +37,7 @@ class AssertionsBase:
         timeout: float = None,
         is_not: bool = False,
         message: Optional[str] = None,
+        soft_context: Optional["SoftAssertionContext"] = None,
     ) -> None:
         self._actual_locator = locator
         self._loop = locator._loop
@@ -44,6 +45,7 @@ class AssertionsBase:
         self._timeout = timeout
         self._is_not = is_not
         self._custom_message = message
+        self._soft_context = soft_context
 
     async def _expect_impl(
         self,
@@ -71,9 +73,13 @@ class AssertionsBase:
                 out_message = (
                     f"{message} '{expected}'" if expected is not None else f"{message}"
                 )
-            raise AssertionError(
+            error = AssertionError(
                 f"{out_message}\nActual value: {actual} {format_call_log(result.get('log'))}"
             )
+            if self._soft_context is not None:
+                self._soft_context.add_failure(error)
+            else:
+                raise error
 
 
 class PageAssertions(AssertionsBase):
@@ -83,14 +89,19 @@ class PageAssertions(AssertionsBase):
         timeout: float = None,
         is_not: bool = False,
         message: Optional[str] = None,
+        soft_context: Optional["SoftAssertionContext"] = None,
     ) -> None:
-        super().__init__(page.locator(":root"), timeout, is_not, message)
+        super().__init__(page.locator(":root"), timeout, is_not, message, soft_context)
         self._actual_page = page
 
     @property
     def _not(self) -> "PageAssertions":
         return PageAssertions(
-            self._actual_page, self._timeout, not self._is_not, self._custom_message
+            self._actual_page,
+            self._timeout,
+            not self._is_not,
+            self._custom_message,
+            self._soft_context,
         )
 
     async def to_have_title(
@@ -148,14 +159,19 @@ class LocatorAssertions(AssertionsBase):
         timeout: float = None,
         is_not: bool = False,
         message: Optional[str] = None,
+        soft_context: Optional["SoftAssertionContext"] = None,
     ) -> None:
-        super().__init__(locator, timeout, is_not, message)
+        super().__init__(locator, timeout, is_not, message, soft_context)
         self._actual_locator = locator
 
     @property
     def _not(self) -> "LocatorAssertions":
         return LocatorAssertions(
-            self._actual_locator, self._timeout, not self._is_not, self._custom_message
+            self._actual_locator,
+            self._timeout,
+            not self._is_not,
+            self._custom_message,
+            self._soft_context,
         )
 
     async def to_contain_text(
@@ -419,7 +435,9 @@ class LocatorAssertions(AssertionsBase):
     async def to_have_values(
         self,
         values: Union[
-            Sequence[str], Sequence[Pattern[str]], Sequence[Union[Pattern[str], str]]
+            Sequence[str],
+            Sequence[Pattern[str]],
+            Sequence[Union[Pattern[str], str]],
         ],
         timeout: float = None,
     ) -> None:
@@ -435,7 +453,9 @@ class LocatorAssertions(AssertionsBase):
     async def not_to_have_values(
         self,
         values: Union[
-            Sequence[str], Sequence[Pattern[str]], Sequence[Union[Pattern[str], str]]
+            Sequence[str],
+            Sequence[Pattern[str]],
+            Sequence[Union[Pattern[str], str]],
         ],
         timeout: float = None,
     ) -> None:
@@ -848,6 +868,7 @@ class APIResponseAssertions:
         timeout: float = None,
         is_not: bool = False,
         message: Optional[str] = None,
+        soft_context: Optional["SoftAssertionContext"] = None,
     ) -> None:
         self._loop = response._loop
         self._dispatcher_fiber = response._dispatcher_fiber
@@ -855,11 +876,16 @@ class APIResponseAssertions:
         self._is_not = is_not
         self._actual = response
         self._custom_message = message
+        self._soft_context = soft_context
 
     @property
     def _not(self) -> "APIResponseAssertions":
         return APIResponseAssertions(
-            self._actual, self._timeout, not self._is_not, self._custom_message
+            self._actual,
+            self._timeout,
+            not self._is_not,
+            self._custom_message,
+            self._soft_context,
         )
 
     async def to_be_ok(
@@ -880,11 +906,43 @@ class APIResponseAssertions:
         if text is not None:
             out_message += f"\n Response Text:\n{text[:1000]}"
 
-        raise AssertionError(out_message)
+        error = AssertionError(out_message)
+        if self._soft_context is not None:
+            self._soft_context.add_failure(error)
+        else:
+            raise error
 
     async def not_to_be_ok(self) -> None:
         __tracebackhide__ = True
         await self._not.to_be_ok()
+
+
+class SoftAssertionContext:
+    def __init__(self) -> None:
+        self._failures: List[Exception] = []
+
+    @property
+    def failures(self) -> List[Exception]:
+        return self._failures.copy()
+
+    def add_failure(self, error: Exception) -> None:
+        if not str(error):
+            raise ValueError("Failure message cannot be empty")
+        self._failures.append(error)
+
+    def has_failures(self) -> bool:
+        return bool(self._failures)
+
+    def get_failure_messages(self) -> str:
+        return "\n".join(
+            f"{i}. {str(error)}" for i, error in enumerate(self._failures, 1)
+        )
+
+    def __repr__(self) -> str:
+        return f"SoftAssertionContext(failures={len(self._failures)})"
+
+    def __bool__(self) -> bool:
+        return self.has_failures()
 
 
 def expected_regex(
@@ -907,7 +965,9 @@ def expected_regex(
 
 def to_expected_text_values(
     items: Union[
-        Sequence[Pattern[str]], Sequence[str], Sequence[Union[str, Pattern[str]]]
+        Sequence[Pattern[str]],
+        Sequence[str],
+        Sequence[Union[str, Pattern[str]]],
     ],
     match_substring: bool = False,
     normalize_white_space: bool = False,
