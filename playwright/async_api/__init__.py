@@ -118,7 +118,17 @@ class Expect:
         soft_expect._timeout = self._timeout
         soft_expect._soft_context = context
 
-        yield soft_expect
+        try:
+            yield soft_expect
+        except Exception as e:
+            if context.has_failures():
+                raise AssertionError(
+                    f"soft assertion failures:\n{context.get_failure_messages()}"
+                ) from e
+            raise
+
+        # todo: do something about duplication, check tests, maybe add additional,
+        # do the same for sync api
 
         if context.has_failures():
             raise AssertionError(
