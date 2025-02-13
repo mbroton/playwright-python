@@ -522,8 +522,7 @@ def test_assertions_boolean_checked_with_intermediate_true_and_checked(
 def test_assertions_boolean_fail_with_indeterminate_true(page: Page) -> None:
     page.set_content("<input type=checkbox></input>")
     with pytest.raises(
-        AssertionError,
-        match="LocatorAssertions.to_be_checked with timeout 1000ms",
+        AssertionError, match="LocatorAssertions.to_be_checked with timeout 1000ms"
     ):
         expect(page.locator("input")).to_be_checked(indeterminate=True, timeout=1000)
 
@@ -560,9 +559,7 @@ def test_assertions_locator_to_be_enabled_with_false(page: Page) -> None:
     expect(page.locator("button")).to_be_enabled(enabled=False)
 
 
-def test_assertions_locator_to_be_enabled_with_not_and_false(
-    page: Page,
-) -> None:
+def test_assertions_locator_to_be_enabled_with_not_and_false(page: Page) -> None:
     page.set_content("<button>Text</button>")
     expect(page.locator("button")).not_to_be_enabled(enabled=False)
 
@@ -580,9 +577,7 @@ def test_assertions_locator_to_be_enabled_eventually(page: Page) -> None:
     expect(page.locator("button")).to_be_enabled()
 
 
-def test_assertions_locator_to_be_enabled_eventually_with_not(
-    page: Page,
-) -> None:
+def test_assertions_locator_to_be_enabled_eventually_with_not(page: Page) -> None:
     page.set_content("<button>Text</button>")
     page.eval_on_selector(
         "button",
@@ -629,9 +624,7 @@ def test_assertions_locator_to_be_editable_with_false_and_throw_good_exception(
         expect(page.locator("input")).to_be_editable(editable=False)
 
 
-def test_assertions_locator_to_be_editable_with_not_and_false(
-    page: Page,
-) -> None:
+def test_assertions_locator_to_be_editable_with_not_and_false(page: Page) -> None:
     page.set_content("<input></input>")
     expect(page.locator("input")).not_to_be_editable(editable=False)
 
@@ -688,9 +681,7 @@ def test_assertions_locator_to_be_visible_with_false_throws_good_exception(
         expect(page.locator("button")).to_be_visible(visible=False)
 
 
-def test_assertions_locator_to_be_visible_with_not_and_false(
-    page: Page,
-) -> None:
+def test_assertions_locator_to_be_visible_with_not_and_false(page: Page) -> None:
     page.set_content("<button>hello</button>")
     expect(page.locator("button")).not_to_be_visible(visible=False)
 
@@ -708,9 +699,7 @@ def test_assertions_locator_to_be_visible_eventually(page: Page) -> None:
     expect(page.locator("span")).to_be_visible()
 
 
-def test_assertions_locator_to_be_visible_eventually_with_not(
-    page: Page,
-) -> None:
+def test_assertions_locator_to_be_visible_eventually_with_not(page: Page) -> None:
     page.set_content("<div><span>Hello</span></div>")
     page.eval_on_selector(
         "span",
