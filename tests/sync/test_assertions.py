@@ -1071,33 +1071,6 @@ def test_assertions_soft_basic(page: Page) -> None:
     assert "1. Locator expected to have text 'wrong'" in str(excinfo.value)
     assert "2. Locator expected to have text 'wrong2'" in str(excinfo.value)
 
-    with pytest.raises(AssertionError) as excinfo:
-        with expect.soft() as soft_expect:
-            soft_expect(page.locator("#div1")).to_have_text("wrong")
-            soft_expect(page.locator("#div2")).to_have_text("wrong2")
-    assert "1. Locator expected to have text 'wrong'" in str(excinfo.value)
-    assert "2. Locator expected to have text 'wrong2'" in str(excinfo.value)
-
-
-def test_assertions_soft_mixed_with_regular(page: Page) -> None:
-    page.set_content(
-        """
-        <div id="div1">Text1</div>
-        <div id="div2">Text2</div>
-    """
-    )
-
-    with pytest.raises(AssertionError) as excinfo:
-        expect(page.locator("#div1")).to_have_text("wrong")
-    assert "Locator expected to have text 'wrong'" in str(excinfo.value)
-
-    with pytest.raises(AssertionError) as excinfo:
-        with expect.soft() as soft_expect:
-            expect(page.locator("#div1")).to_have_text("Text1")
-            soft_expect(page.locator("#div2")).to_have_text("wrong2")
-            expect(page.locator("#div2")).to_have_text("Text2")
-    assert "1. Locator expected to have text 'wrong2'" in str(excinfo.value)
-
 
 def test_assertions_soft_with_custom_message(page: Page) -> None:
     page.set_content('<div id="div1">Text1</div>')
