@@ -18,7 +18,8 @@ Firefox and WebKit with a single API. Playwright is built to enable cross-browse
 web automation that is ever-green, capable, reliable and fast.
 """
 
-from typing import Any, Optional, Union, overload
+from contextlib import contextmanager
+from typing import Any, Generator, Optional, Union, overload
 
 import playwright._impl._api_structures
 import playwright._impl._errors
@@ -28,6 +29,7 @@ from playwright._impl._assertions import (
 )
 from playwright._impl._assertions import LocatorAssertions as LocatorAssertionsImpl
 from playwright._impl._assertions import PageAssertions as PageAssertionsImpl
+from playwright._impl._assertions import SoftAssertionContext
 from playwright.async_api._context_manager import PlaywrightContextManager
 from playwright.async_api._generated import (
     Accessibility,
@@ -94,6 +96,7 @@ class Expect:
 
     def __init__(self) -> None:
         self._timeout: Optional[float] = None
+        self._soft_context: Optional[SoftAssertionContext] = None
 
     def set_options(self, timeout: Optional[float] = _unset) -> None:
         """
@@ -107,6 +110,20 @@ class Expect:
         """
         if timeout is not self._unset:
             self._timeout = timeout
+
+    @contextmanager
+    def soft(self) -> Generator["Expect", None, None]:
+        context = SoftAssertionContext()
+        soft_expect = Expect()
+        soft_expect._timeout = self._timeout
+        soft_expect._soft_context = context
+
+        yield soft_expect
+
+        if context.has_failures():
+            raise AssertionError(
+                f"soft assertion failures:\n{context.get_failure_messages()}"
+            )
 
     @overload
     def __call__(
@@ -128,16 +145,29 @@ class Expect:
     ) -> Union[PageAssertions, LocatorAssertions, APIResponseAssertions]:
         if isinstance(actual, Page):
             return PageAssertions(
-                PageAssertionsImpl(actual._impl_obj, self._timeout, message=message)
+                PageAssertionsImpl(
+                    actual._impl_obj,
+                    self._timeout,
+                    message=message,
+                    soft_context=self._soft_context,
+                )
             )
         elif isinstance(actual, Locator):
             return LocatorAssertions(
-                LocatorAssertionsImpl(actual._impl_obj, self._timeout, message=message)
+                LocatorAssertionsImpl(
+                    actual._impl_obj,
+                    self._timeout,
+                    message=message,
+                    soft_context=self._soft_context,
+                )
             )
         elif isinstance(actual, APIResponse):
             return APIResponseAssertions(
                 APIResponseAssertionsImpl(
-                    actual._impl_obj, self._timeout, message=message
+                    actual._impl_obj,
+                    self._timeout,
+                    message=message,
+                    soft_context=self._soft_context,
                 )
             )
         raise ValueError(f"Unsupported type: {type(actual)}")

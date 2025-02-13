@@ -1079,3 +1079,121 @@ async def test_to_have_role(page: Page) -> None:
     with pytest.raises(Error) as excinfo:
         await expect(page.locator("div")).to_have_role(re.compile(r"button|checkbox"))  # type: ignore
     assert '"role" argument in to_have_role must be a string' in str(excinfo.value)
+
+
+async def test_assertions_soft_basic(page: Page) -> None:
+    await page.set_content(
+        """
+        <div id="div1">Text1</div>
+        <div id="div2">Text2</div>
+    """
+    )
+
+    with pytest.raises(AssertionError) as excinfo:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("#div1")).to_have_text("wrong")
+            await soft_expect(page.locator("#div2")).to_have_text("wrong2")
+    assert "1. Locator expected to have text 'wrong'" in str(excinfo.value)
+    assert "2. Locator expected to have text 'wrong2'" in str(excinfo.value)
+
+
+async def test_assertions_soft_with_custom_message(page: Page) -> None:
+    await page.set_content('<div id="div1">Text1</div>')
+
+    with pytest.raises(AssertionError) as excinfo:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("#div1"), "Custom message 1").to_have_text(
+                "wrong"
+            )
+            await soft_expect(page.locator("#div1"), "Custom message 2").to_have_text(
+                "also wrong"
+            )
+    assert "1. Custom message 1" in str(excinfo.value)
+    assert "2. Custom message 2" in str(excinfo.value)
+
+
+async def test_assertions_soft_with_different_types(page: Page, server: Server) -> None:
+    await page.set_content(
+        """
+        <div id="div1">Text1</div>
+        <title>Page Title</title>
+    """
+    )
+
+    with pytest.raises(AssertionError) as excinfo:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("#div1")).to_have_text("wrong")
+            await soft_expect(page).to_have_title("wrong title")
+            response = await page.request.get(server.PREFIX + "/non-existent")
+            await soft_expect(response).to_be_ok()
+
+    error_text = str(excinfo.value)
+    assert "1. Locator expected to have text 'wrong'" in error_text
+    assert "2. Page title expected to be 'wrong title'" in error_text
+    assert "3. Response status expected to be within [200..299] range" in error_text
+
+
+async def test_assertions_soft_error_order(page: Page) -> None:
+    await page.set_content(
+        """
+        <div id="first">First</div>
+        <div id="second">Second</div>
+        <div id="third">Third</div>
+    """
+    )
+
+    with pytest.raises(AssertionError) as excinfo:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("#third")).to_have_text("wrong3")
+            await soft_expect(page.locator("#first")).to_have_text("wrong1")
+            await soft_expect(page.locator("#second")).to_have_text("wrong2")
+
+    error_text = str(excinfo.value)
+    first_pos = error_text.find("wrong3")
+    second_pos = error_text.find("wrong1")
+    third_pos = error_text.find("wrong2")
+    assert (
+        first_pos < second_pos < third_pos
+    ), "Errors should be reported in order of occurrence"
+
+
+async def test_assertions_soft_no_failures(page: Page) -> None:
+    await page.set_content("<div>Text</div>")
+
+    try:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("div")).to_have_text("Text")
+            await soft_expect(page.locator("div")).to_be_visible()
+    except Exception as e:
+        pytest.fail(f"Should not have raised an exception, but got: {e}")
+
+
+async def test_assertions_soft_global_timeout(page: Page) -> None:
+    await page.set_content("<div>Text</div>")
+
+    original_timeout = expect._timeout
+    try:
+        expect.set_options(timeout=2000)
+        with pytest.raises(AssertionError) as excinfo:
+            with expect.soft() as soft_expect:
+                await soft_expect(page.locator("div")).to_have_text(
+                    "wrong", timeout=100
+                )
+                await soft_expect(page.locator("div")).to_have_text("also wrong")
+
+        error_text = str(excinfo.value)
+        assert "timeout 100ms" in error_text
+        assert "timeout 2000ms" in error_text
+    finally:
+        expect.set_options(timeout=original_timeout)
+
+
+async def test_assertions_soft_with_exceptions(page: Page) -> None:
+    await page.set_content("<div>Text</div>")
+
+    with pytest.raises(ValueError) as excinfo:
+        with expect.soft() as soft_expect:
+            await soft_expect(page.locator("div")).to_have_text("wrong")
+            raise ValueError("Some error")
+
+    assert str(excinfo.value) == "Some error"
