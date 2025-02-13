@@ -918,8 +918,6 @@ class SoftAssertionContext:
         self._failures: List[Exception] = []
 
     def add_failure(self, error: Exception) -> None:
-        if not str(error):
-            raise ValueError("Failure message cannot be empty")
         self._failures.append(error)
 
     def has_failures(self) -> bool:
@@ -932,9 +930,6 @@ class SoftAssertionContext:
 
     def __repr__(self) -> str:
         return f"SoftAssertionContext(failures={len(self._failures)})"
-
-    def __bool__(self) -> bool:
-        return self.has_failures()
 
 
 def expected_regex(
