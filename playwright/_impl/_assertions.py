@@ -435,9 +435,7 @@ class LocatorAssertions(AssertionsBase):
     async def to_have_values(
         self,
         values: Union[
-            Sequence[str],
-            Sequence[Pattern[str]],
-            Sequence[Union[Pattern[str], str]],
+            Sequence[str], Sequence[Pattern[str]], Sequence[Union[Pattern[str], str]]
         ],
         timeout: float = None,
     ) -> None:
@@ -453,9 +451,7 @@ class LocatorAssertions(AssertionsBase):
     async def not_to_have_values(
         self,
         values: Union[
-            Sequence[str],
-            Sequence[Pattern[str]],
-            Sequence[Union[Pattern[str], str]],
+            Sequence[str], Sequence[Pattern[str]], Sequence[Union[Pattern[str], str]]
         ],
         timeout: float = None,
     ) -> None:
@@ -961,9 +957,7 @@ def expected_regex(
 
 def to_expected_text_values(
     items: Union[
-        Sequence[Pattern[str]],
-        Sequence[str],
-        Sequence[Union[str, Pattern[str]]],
+        Sequence[Pattern[str]], Sequence[str], Sequence[Union[str, Pattern[str]]]
     ],
     match_substring: bool = False,
     normalize_white_space: bool = False,

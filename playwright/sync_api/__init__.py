@@ -141,9 +141,7 @@ class Expect:
     ) -> APIResponseAssertions: ...
 
     def __call__(
-        self,
-        actual: Union[Page, Locator, APIResponse],
-        message: Optional[str] = None,
+        self, actual: Union[Page, Locator, APIResponse], message: Optional[str] = None
     ) -> Union[PageAssertions, LocatorAssertions, APIResponseAssertions]:
         if isinstance(actual, Page):
             return PageAssertions(
